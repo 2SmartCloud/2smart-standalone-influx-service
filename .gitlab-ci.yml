@@ -1,0 +1,35 @@
+image: $DOCKER_REGISTRY_PREFIX/2smart/utils/combined-ci-image:buildx
+
+stages:
+  - build
+  - push
+  - buildx
+
+before_script:
+  - git clone https://oauth2:$ACCESS_TOKEN@$DOCKER_UTILS_REPO_URL
+  - mv docker-utils/utils.sh docker.sh
+
+services:
+  - name: $DOCKER_REGISTRY_PREFIX/2smart/base-images/docker-dind
+    alias: docker
+  
+variables:
+  IMAGE_PLATFORMS: linux/amd64,linux/arm/v7
+
+build:
+  stage: build
+  script:
+    - ./docker.sh rundaemon
+    - ./docker.sh build
+    - ./docker.sh push
+  only:
+    - 'master'
+
+buildx:
+  stage: buildx
+  script:
+    - ./docker.sh rundaemon
+    - ./docker.sh login
+    - SOURCE_TAG=$MULTIPLATFORM_TAG ./docker.sh buildx
+  when: manual
+  allow_failure: true
